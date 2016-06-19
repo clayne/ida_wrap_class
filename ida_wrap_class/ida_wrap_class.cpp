@@ -102,12 +102,11 @@ static bool idaapi generate_cpp(void *ud)
 									{
 										dfuncname.remove(0, pos_ag2 + 2);
 									}
-									//dfuncname.replace("::", "_");
 									dfuncname.replace("`vector deleting destructor'", "vec_del");
 									size_t pos_ag = dfuncname.find("(");
 									if (pos_ag > 0)
 									{
-									
+										dfuncname.remove(pos_ag, dfuncname.size() - pos_ag);
 									}
 
 									if (rettype_str.size() > 0)
@@ -136,58 +135,70 @@ static bool idaapi generate_cpp(void *ud)
 										args_val_str += "(";
 										if (is_thiscall == true)
 										{
-											if (vidx + 1 < type.get_nargs())
-											{
-												args_type_str += "void *,";
-												args_val_str += "(void*)this,";
-											}
-											else
-											{
-												args_type_str += "void *";
-												args_val_str += "(void*)this";
-											}
-
+											args_type_str += "void *";
+											args_val_str += "(void*)this";
 											vidx = 1;
 										}
-										for (; vidx < type.get_nargs(); ++vidx)
+										lvars_t* lvars = cfunc->get_lvars();
+										for (int lvi = 0; lvi < lvars->size(); ++lvi)
 										{
-											qstring v_str = "";
-											qstring vname_str = "";
-											tinfo_t v_type = type.get_nth_arg(vidx);
-											vname_str.sprnt("_param_%d", vidx);
-											v_type.print(&v_str, NULL,  PRTYPE_1LINE | PRTYPE_CPP);
-											if (v_str.size() > 0)
+											lvar_t lv = lvars->at(lvi);
+											if (lv.is_arg_var())
 											{
-												args_str += " ";
-												args_str += v_str;
-												args_type_str += v_str;
-												if (vname_str.size() > 0)
+												if (is_thiscall == true && vidx == 1)
 												{
-													args_str += " ";
-													args_str += vname_str;
-													args_val_str += vname_str;
-													if (vidx + 1 < type.get_nargs())
+													vidx++;
+													continue;
+												}
+
+												qstring v_str = "";
+												qstring vname_str = "";
+												tinfo_t v_type = lv.type();
+												vname_str = lv.name;
+												v_type.print(&v_str, NULL, PRTYPE_1LINE | PRTYPE_CPP);
+												if (v_str.size() > 0)
+												{
+													if ((is_thiscall == false && vidx > 0) || (is_thiscall == true && vidx > 2))
 													{
 														args_str += ",";
 														args_type_str += ",";
 														args_val_str += ",";
 													}
+
+													args_str += " ";
+													args_str += v_str;
+													args_type_str += v_str;
+													if (vname_str.size() > 0)
+													{
+														args_str += " ";
+														args_str += vname_str;
+														args_val_str += vname_str;
+													}
 												}
+												vidx++;
 											}
 										}
+
 										args_str += ")";
 										args_type_str += ")";
 										args_val_str += ")";
 									}
 									else
 									{
-										args_str += "();";
+										args_str += "()";
 										args_type_str += "()";
 										args_val_str += "()";
 									}
 									dump_line += args_str;
 									dump_line += "\r\n{\r\n";
-									dump_line += "\t\t((";
+									if (!ret_type.is_decl_void())
+									{
+										dump_line += "\t\t return ((";
+									}
+									else
+									{
+										dump_line += "\t\t((";
+									}
 									dump_line += rettype_str;
 									dump_line += "(";
 									dump_line += cc_str;
