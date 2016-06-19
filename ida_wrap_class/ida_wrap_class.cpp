@@ -48,6 +48,7 @@ static bool idaapi generate_cpp(void *ud)
 					method_filter_name += "::";
 					for (size_t i = 0; i < total_func_qty; i++)
 					{
+						dump_line = "";
 						func_t *function = getn_func(i);
 						if (function != NULL)
 						{
