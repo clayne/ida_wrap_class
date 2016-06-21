@@ -34,6 +34,8 @@ static bool idaapi generate_cpp(void *ud)
 
 				//!--Write file
 				qstring classnamefile = method_filter_name;
+				classnamefile.replace("<", "_");
+				classnamefile.replace(">", "_");
 				classnamefile += ".hpp";
 				int file_id = create_open_file(classnamefile.c_str());
 				if (file_id != -1)
@@ -48,7 +50,7 @@ static bool idaapi generate_cpp(void *ud)
 					method_filter_name += "::";
 					for (size_t i = 0; i < total_func_qty; i++)
 					{
-						dump_line = "";
+						dump_line = "inline \r\n";
 						func_t *function = getn_func(i);
 						if (function != NULL)
 						{
@@ -102,6 +104,9 @@ static bool idaapi generate_cpp(void *ud)
 									{
 										dfuncname.remove(0, pos_ag2 + 2);
 									}
+
+									dfuncname.replace("::", "_");
+
 									dfuncname.replace("`vector deleting destructor'", "vec_del");
 									size_t pos_ag = dfuncname.find("(");
 									if (pos_ag > 0)
@@ -158,7 +163,7 @@ static bool idaapi generate_cpp(void *ud)
 												v_type.print(&v_str, NULL, PRTYPE_1LINE | PRTYPE_CPP);
 												if (v_str.size() > 0)
 												{
-													if ((is_thiscall == false && vidx > 0) || (is_thiscall == true && vidx > 2))
+													if ((is_thiscall == false && vidx > 0) || (is_thiscall == true && vidx > 1))
 													{
 														args_str += ",";
 														args_type_str += ",";
