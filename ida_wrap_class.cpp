@@ -15,16 +15,18 @@ int create_open_file(const char* file_name) {
 	return file_id;
 }
 
-static bool idaapi generate_cpp(void *ud)
+struct generate_cpp_t : public action_handler_t
 {
-	vdui_t &vu = *(vdui_t *)ud;
+  virtual int idaapi activate(action_activation_ctx_t *ctx)
+  {
+    vdui_t &vu = *get_widget_vdui(ctx->widget);
 	cfuncptr_t pfunc = vu.cfunc;
 
 	if (pfunc != NULL)
 	{
 		qstring method_filter_name = "";
-		flags_t method_flags = getFlags(pfunc->entry_ea);
-		if (isFunc(method_flags))
+		flags_t method_flags = get_flags(pfunc->entry_ea);
+		if (is_func(method_flags))
 		{
 			method_filter_name = get_short_name(pfunc->entry_ea);
 			size_t pos_ag = method_filter_name.find("::");
@@ -54,7 +56,7 @@ static bool idaapi generate_cpp(void *ud)
 						func_t *function = getn_func(i);
 						if (function != NULL)
 						{
-							qstring dfuncname = get_short_name(function->startEA);
+							qstring dfuncname = get_short_name(function->start_ea);
 							if (dfuncname.find(method_filter_name) == 0)
 							{
 								//!--same class
@@ -211,7 +213,7 @@ static bool idaapi generate_cpp(void *ud)
 									dump_line += args_type_str;
 									dump_line += ")";
 									dump_line += "((DWORD)";
-									dump_line.cat_sprnt("0x%08X", function->startEA);
+									dump_line.cat_sprnt("0x%08X", function->start_ea);
 									dump_line += "))";
 									dump_line += args_val_str;
 									dump_line += "";
@@ -236,9 +238,26 @@ static bool idaapi generate_cpp(void *ud)
 	}
 
 	info("Generated class method.");
-	return false;
-}
+    return 1;
+  }
 
+	virtual action_state_t idaapi update(action_update_ctx_t *ctx)
+	{
+		bool ok = ctx->widget_type == BWN_DISASM;
+		return ok ? AST_ENABLE_FOR_WIDGET : AST_DISABLE_FOR_WIDGET;
+	}
+};
+
+static generate_cpp_t generate_cpp_ah;
+static const action_desc_t wrap_action =
+  ACTION_DESC_LITERAL(
+   "IDAWRAP:WRAP",
+    "Generate all method in same class",
+    &generate_cpp_ah,
+    NULL,
+    NULL,
+    -1
+  );
 
 //--------------------------------------------------------------------------
 static int idaapi callback(void *, hexrays_event_t event, va_list va)
@@ -247,8 +266,11 @@ static int idaapi callback(void *, hexrays_event_t event, va_list va)
 	{
 	case hxe_right_click:
 	{
+		TWidget *widget = va_arg(va, TWidget *);
+        TPopupMenu *popup = va_arg(va, TPopupMenu *);
 		vdui_t &vu = *va_arg(va, vdui_t *);
-		add_custom_viewer_popup_item(vu.ct, "Generate all method in same class", "", generate_cpp, &vu);
+		//add_custom_viewer_popup_item(vu.ct, "Generate all method in same class", "", generate_cpp, &vu);
+		attach_action_to_popup(widget, popup, "IDAWRAP:WRAP");
 	}
 	break;
 	default:
@@ -271,6 +293,7 @@ int idaapi init(void)
 
 	install_hexrays_callback(callback, NULL);
 	const char *hxver = get_hexrays_version();
+	register_action(wrap_action);
 	inited = true;
 
 	static const char hotkey_vc[] = "V";
@@ -291,7 +314,7 @@ void idaapi term(void)
 }
 
 //--------------------------------------------------------------------------
-void idaapi run(int)
+bool idaapi run(size_t)
 {
 
 }

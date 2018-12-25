@@ -4,13 +4,14 @@
 //
 
 #pragma once
+#ifdef __NT__
 
 #include "targetver.h"
 
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
 // Windows Header Files:
 #include <windows.h>
-
+#endif
 
 
 #include <hexrays.hpp>
@@ -34,7 +35,7 @@
 
 #include <cstring>
 #include <cstdarg>
-#include <cstdint>
+//#include <cstdint>
 
 #include <iterator>
 #include <string>
